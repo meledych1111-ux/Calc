@@ -1,57 +1,573 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
-  <title>Рукописный калькулятор</title>
-  <link rel="stylesheet" href="style.css"/>
+<meta charset="utf-8" />
+<title>Калькулятор для стилуса — с историей и PWA</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#161616">
+<style>
+:root {
+  --bg: #000;
+  --surface: #161616;
+  --btn: #222;
+  --btn-hover: #333;
+  --accent: #ff2e63;
+  --text: #fff;
+  --radius: 12px;
+}
+* { box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  display: flex; justify-content: center; align-items: flex-start;
+  min-height: 100vh; padding: .75rem;
+}
+.container { width: 100%; max-width: 520px; }
+.calc { padding: .5rem; }
+#screen {
+  width: 100%; font-size: 2.1rem; font-weight: 600;
+  padding: .8rem; text-align: right; border: none;
+  background: var(--surface); color: var(--text);
+  border-radius: var(--radius); margin-bottom: .5rem;
+  outline: none;
+}
+.canvas-wrap {
+  display:flex; gap:.5rem; align-items:flex-start;
+  margin-bottom:.5rem;
+}
+#draw {
+  flex:1; height:160px; background: #fff; border-radius: var(--radius);
+  border: 3px solid var(--accent); touch-action: none;
+  display:block;
+}
+.controls { width:120px; display:flex; flex-direction:column; gap:.5rem; }
+.small-btn { padding:.5rem; border-radius:10px; background:#111; color:var(--text); border:none; cursor:pointer; font-size:0.9rem; }
+.small-btn:active{ background:#222; }
+#history { margin-top:.6rem; background:#0e0e0e; padding:.5rem; border-radius:10px; max-height:160px; overflow:auto; font-size:0.95rem; }
+.hitem { padding:.35rem; border-radius:8px; display:flex; justify-content:space-between; gap:.5rem; align-items:center; cursor:pointer; }
+.hitem:hover { background: #111; }
+
+.grid {
+  display: grid; grid-template-columns: repeat(5,1fr); gap: .4rem;
+  margin-top: .5rem;
+}
+button.key {
+  min-height: 56px; font-size: 1.15rem; border: none;
+  border-radius: 10px; background: var(--btn);
+  color: var(--text); cursor: pointer;
+}
+button.key:active { background: var(--btn-hover); }
+button.op { background: var(--accent); }
+.span2 { grid-column: span 2; }
+
+.footer { margin-top:.6rem; font-size:0.85rem; color:#aaa; display:flex; justify-content:space-between; align-items:center; }
+kbd { background:#111; padding:.15rem .35rem; border-radius:5px; font-weight:600; }
+
+/* responsive */
+@media (max-width:480px){
+  .canvas-wrap { flex-direction:column; }
+  .controls { width:100%; flex-direction:row; gap:.4rem; }
+}
+</style>
 </head>
 <body>
-  <input id="screen" readonly placeholder="0"/>
-  <canvas id="canvas" width="420" height="160"></canvas>
-  <button id="clearPad">Очистить поле</button>
+<div class="container">
+  <main class="calc">
+    <input id="screen" readonly placeholder="0">
 
-  <section class="buttons">
-    <div class="grid">
-      <button data-op="clear">C</button>
-      <button data-op="(">(</button>
-      <button data-op=")">)</button>
-      <button data-fn="sin">sin</button>
-      <button data-fn="cos">cos</button>
-
-      <button data-fn="tan">tan</button>
-      <button data-fn="log">log</button>
-      <button data-fn="ln">ln</button>
-      <button data-fn="sqrt">√</button>
-      <button data-op="^">xʸ</button>
-
-      <button data-val="7">7</button>
-      <button data-val="8">8</button>
-      <button data-val="9">9</button>
-      <button data-op="÷" class="op">÷</button>
-      <button data-val="π">π</button>
-
-      <button data-val="4">4</button>
-      <button data-val="5">5</button>
-      <button data-val="6">6</button>
-      <button data-op="×" class="op">×</button>
-      <button data-val="e">e</button>
-
-      <button data-val="1">1</button>
-      <button data-val="2">2</button>
-      <button data-val="3">3</button>
-      <button data-op="-" class="op">-</button>
-      <button data-op="=" class="op">=</button>
-
-      <button data-val="0" style="grid-column: span 2">0</button>
-      <button data-val=".">.</button>
-      <button data-op="+" class="op">+</button>
+    <div class="canvas-wrap">
+      <canvas id="draw"></canvas>
+      <div class="controls" role="group" aria-label="Canvas controls">
+        <button id="clearCanvas" class="small-btn">Очистить холст</button>
+        <button id="undoStroke" class="small-btn">Отменить штрих</button>
+        <button id="recognizeBtn" class="small-btn">Распознать</button>
+        <button id="togglePen" class="small-btn">Режим: рисовать</button>
+      </div>
     </div>
-  </section>
 
-  <!-- MyScript CDN -->
-  <script src="https://cdn.myscript.com/js/myscript-math-web.min.js"></script>
-  <script src="logic.js"></script>
-  <script src="canvas.js"></script>
+    <section class="buttons">
+      <div class="grid">
+        <button class="key" id="btn-clear" data-op="clear">C</button>
+        <button class="key" data-op="back">⌫</button>
+        <button class="key" data-op="(">(</button>
+        <button class="key" data-op=")">)</button>
+        <button class="key" data-fn="sin">sin</button>
+
+        <button class="key" data-fn="cos">cos</button>
+        <button class="key" data-fn="tan">tan</button>
+        <button class="key" data-fn="log">log</button>
+        <button class="key" data-fn="ln">ln</button>
+        <button class="key" data-fn="sqrt">√</button>
+
+        <button class="key" data-op="^">xʸ</button>
+        <button class="key" data-val="7">7</button>
+        <button class="key" data-val="8">8</button>
+        <button class="key" data-val="9">9</button>
+        <button class="key op" data-op="÷">÷</button>
+
+        <button class="key" data-val="π">π</button>
+        <button class="key" data-val="4">4</button>
+        <button class="key" data-val="5">5</button>
+        <button class="key" data-val="6">6</button>
+        <button class="key op" data-op="×">×</button>
+
+        <button class="key" data-val="e">e</button>
+        <button class="key data-val" data-val="1">1</button>
+        <button class="key data-val" data-val="2">2</button>
+        <button class="key data-val" data-val="3">3</button>
+        <button class="key op" data-op="-">-</button>
+
+        <button class="key span2" data-val="0">0</button>
+        <button class="key" data-val=".">.</button>
+        <button class="key op" data-op="+">+</button>
+        <button class="key op" data-op="=">=</button>
+      </div>
+    </section>
+
+    <div id="history" aria-live="polite"></div>
+
+    <div class="footer">
+      <div>История — последние 10 вычислений</div>
+      <div>Установить: <span id="installHint">—</span></div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ========== Общий scope ========== */
+(function () {
+  const screen = document.getElementById('screen');
+  let expr = '';
+  let reset = false;
+  const HISTORY_KEY = 'calc_history_v1';
+  let history = loadHistory();
+
+  function write(s) {
+    if (reset) { expr = ''; reset = false; }
+    expr += s;
+    screen.value = expr || '0';
+  }
+
+  function backspace() {
+    if (!expr) return;
+    expr = expr.slice(0, -1);
+    screen.value = expr || '0';
+  }
+
+  function clearAll() {
+    expr = '';
+    screen.value = '0';
+    reset = false;
+  }
+
+  /* ================= Parser (как у тебя, с небольшими правками) ================= */
+  const Parser = (() => {
+    const PI = Math.PI, E = Math.E;
+
+    function tokenize(str) {
+      str = str.replace(/\s+/g, '');
+      const re = /([a-zπe]+|\d+\.?\d*|\.\d+|[+\-*/^(),])/g;
+      let m, out = [];
+      while ((m = re.exec(str)) !== null) {
+        const token = m[1];
+        if (token === '-') {
+          const prev = out[out.length - 1];
+          if (!prev || prev === '(' || /^[+\-*/^]$/.test(prev)) {
+            out.push('u-');
+          } else out.push('-');
+        } else out.push(token);
+      }
+      return out;
+    }
+
+    function parse(str) {
+      const t = tokenize(str);
+      let pos = 0;
+      function peek() { return t[pos]; }
+      function consume(v) { if (peek() !== v) throw new Error('Expected ' + v); pos++; }
+
+      function parseAdd() {
+        let left = parseMul();
+        while (peek() === '+' || peek() === '-') {
+          const op = peek(); pos++;
+          const right = parseMul();
+          left = op === '+' ? left + right : left - right;
+        }
+        return left;
+      }
+
+      function parseMul() {
+        let left = parsePow();
+        while (peek() === '*' || peek() === '/') {
+          const op = peek(); pos++;
+          const right = parsePow();
+          if (op === '/' && right === 0) throw new Error('Division by zero');
+          left = op === '*' ? left * right : left / right;
+        }
+        return left;
+      }
+
+      function parsePow() {
+        let left = parseUnary();
+        if (peek() === '^') {
+          pos++;
+          const right = parsePow();
+          left = Math.pow(left, right);
+        }
+        return left;
+      }
+
+      function parseUnary() {
+        if (peek() === 'u-') { pos++; return -parseUnary(); }
+        return parseAtom();
+      }
+
+      function parseAtom() {
+        const v = peek();
+        if (v === '(') { pos++; const a = parseAdd(); consume(')'); return a; }
+        if (v === 'sin') { pos++; consume('('); const a = parseAdd(); consume(')'); return Math.sin(a); }
+        if (v === 'cos') { pos++; consume('('); const a = parseAdd(); consume(')'); return Math.cos(a); }
+        if (v === 'tan') { pos++; consume('('); const a = parseAdd(); consume(')'); return Math.tan(a); }
+        if (v === 'log') { pos++; consume('('); const a = parseAdd(); if (a <= 0) throw new Error('Log of non-positive number'); consume(')'); return Math.log10(a); }
+        if (v === 'ln')  { pos++; consume('('); const a = parseAdd(); if (a <= 0) throw new Error('Log of non-positive number'); consume(')'); return Math.log(a); }
+        if (v === 'sqrt'){ pos++; consume('('); const a = parseAdd(); if (a < 0) throw new Error('Sqrt of negative number'); consume(')'); return Math.sqrt(a); }
+        if (v === 'π' || v === 'pi') { pos++; return PI; }
+        if (v === 'e') { pos++; return E; }
+        if (!isNaN(v)) { pos++; return parseFloat(v); }
+        throw new Error('Bad token ' + v);
+      }
+
+      const res = parseAdd();
+      if (pos !== t.length) throw new Error('Extra tokens');
+      return res;
+    }
+
+    return { parse };
+  })();
+
+  function calc() {
+    try {
+      // заменяем графические операторы
+      let parseExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/π/g, 'π');
+      // простая проверка длинны
+      if (parseExpr.length > 300) throw new Error('Expression too long');
+
+      const res = Parser.parse(parseExpr);
+
+      let resultStr;
+      if (Math.abs(res) < 1e-12) resultStr = '0';
+      else if (Math.abs(res) > 1e12) resultStr = res.toExponential(6);
+      else resultStr = String(Number(res.toFixed(10)));
+
+      // сохраняем в историю
+      pushHistory({ expr: expr, result: resultStr });
+
+      expr = resultStr;
+      screen.value = expr;
+      reset = true;
+    } catch (e) {
+      console.error(e);
+      screen.value = 'Error';
+      expr = '';
+      reset = true;
+    }
+  }
+
+  /* ======== Кнопки ======== */
+  document.querySelectorAll('button[data-val]').forEach(b => b.addEventListener('click', () => write(b.dataset.val)));
+  document.querySelectorAll('button[data-fn]').forEach(b => b.addEventListener('click', () => write(b.dataset.fn + '(')));
+  document.querySelectorAll('button[data-op]').forEach(b =>
+    b.addEventListener('click', () => {
+      const op = b.dataset.op;
+      if (op === '=') calc();
+      else if (op === 'clear') clearAll();
+      else if (op === 'back') backspace();
+      else write(op);
+    })
+  );
+  document.getElementById('btn-clear').addEventListener('click', clearAll);
+
+  // long-press: очистка expr на удержании backspace
+  (function longPressBack() {
+    const backBtn = [...document.querySelectorAll('button[data-op]')].find(el => el.dataset.op === 'back');
+    let timer;
+    backBtn.addEventListener('pointerdown', () => { timer = setTimeout(() => { clearAll(); }, 600); });
+    backBtn.addEventListener('pointerup', () => { clearTimeout(timer); });
+    backBtn.addEventListener('pointerleave', () => { clearTimeout(timer); });
+  })();
+
+  /* ========== История (localStorage) ========== */
+  const historyEl = document.getElementById('history');
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (!raw) return [];
+      return JSON.parse(raw);
+    } catch { return []; }
+  }
+  function saveHistory() { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); renderHistory(); }
+  function pushHistory(item) {
+    // item: {expr, result}
+    history.unshift(item);
+    if (history.length > 10) history.length = 10;
+    saveHistory();
+  }
+  function renderHistory() {
+    historyEl.innerHTML = '';
+    if (!history.length) { historyEl.textContent = 'Пусто'; return; }
+    history.forEach((h, i) => {
+      const el = document.createElement('div');
+      el.className = 'hitem';
+      el.innerHTML = `<div style="opacity:.9">${escapeHtml(h.expr)}</div><div style="opacity:.8">= ${escapeHtml(h.result)}</div>`;
+      el.title = 'Нажмите, чтобы вставить результат в экран';
+      el.addEventListener('click', () => { expr = h.result; screen.value = expr; reset = false; });
+      historyEl.appendChild(el);
+    });
+  }
+  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  renderHistory();
+
+  /* ========== Canvas и распознавание рукописных цифр (улучшено) ========== */
+  const canvas = document.getElementById('draw');
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+  let lastX = 0;
+  let lastY = 0;
+  let strokes = []; // массив штрихов для возможности undo
+  let curStroke = [];
+  let penMode = true;
+
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.round(rect.width * devicePixelRatio);
+    canvas.height = Math.round(rect.height * devicePixelRatio);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#000';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    redrawAll();
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  function getPos(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = evt.clientX ?? evt.touches?.[0]?.clientX;
+    const clientY = evt.clientY ?? evt.touches?.[0]?.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  function start(e) {
+    if (!penMode) return;
+    drawing = true;
+    curStroke = [];
+    const p = getPos(e);
+    lastX = p.x; lastY = p.y;
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    curStroke.push([lastX, lastY]);
+  }
+  function move(e) {
+    if (!drawing) return;
+    const p = getPos(e);
+    const dist = Math.hypot(p.x - lastX, p.y - lastY);
+    if (dist > 1) {
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      lastX = p.x; lastY = p.y;
+      curStroke.push([lastX, lastY]);
+    }
+  }
+  function stop() {
+    if (!drawing) return;
+    drawing = false;
+    strokes.push(curStroke.slice());
+    curStroke = [];
+    // автоматическое распознавание после паузы
+    setTimeout(() => { recognize(); }, 120);
+  }
+
+  canvas.addEventListener('pointerdown', start);
+  canvas.addEventListener('pointermove', move);
+  canvas.addEventListener('pointerup', stop);
+  canvas.addEventListener('pointerleave', stop);
+
+  document.getElementById('clearCanvas').addEventListener('click', () => { strokes = []; redrawAll(); });
+  document.getElementById('undoStroke').addEventListener('click', () => { strokes.pop(); redrawAll(); });
+  document.getElementById('togglePen').addEventListener('click', () => { penMode = !penMode; document.getElementById('togglePen').textContent = penMode ? 'Режим: рисовать' : 'Режим: панель'; });
+
+  function redrawAll(){
+    // очищаем учитывая масштаб
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0,0,rect.width, rect.height);
+    ctx.beginPath();
+    for (const s of strokes) {
+      if (!s.length) continue;
+      ctx.moveTo(s[0][0], s[0][1]);
+      for (let i=1;i<s.length;i++) ctx.lineTo(s[i][0], s[i][1]);
+    }
+    ctx.stroke();
+  }
+
+  /* ---- Распознавание: нормализация в 28x28, затем сравнение с шаблонами ---- */
+  // Генерируем шаблоны по шрифту (несколько вариантoв), это даёт хорошую базу и офлайн-работу.
+  const TEMPLATE_SIZE = 28;
+  const templateBank = {}; // digit -> [vector, ...]
+  (function generateTemplates() {
+    // используем offscreen canvas для рендеринга цифр в разных стилях/смещениях
+    const off = document.createElement('canvas');
+    off.width = TEMPLATE_SIZE; off.height = TEMPLATE_SIZE;
+    const octx = off.getContext('2d');
+
+    const fonts = ['bold 22px sans-serif','20px sans-serif','24px Arial','italic 22px serif'];
+    for (let d=0; d<=9; d++) {
+      templateBank[d] = [];
+      for (const f of fonts) {
+        octx.clearRect(0,0,TEMPLATE_SIZE,TEMPLATE_SIZE);
+        octx.fillStyle = 'black';
+        octx.fillRect(0,0,TEMPLATE_SIZE,TEMPLATE_SIZE);
+        octx.fillStyle = 'white';
+        octx.fillRect(1,1,TEMPLATE_SIZE-2,TEMPLATE_SIZE-2); // белый background
+        octx.fillStyle = 'black';
+        octx.font = f;
+        octx.textBaseline = 'middle'; octx.textAlign = 'center';
+        // небольшие сдвиги для вариативности
+        const dx = (Math.random()-0.5)*2;
+        const dy = (Math.random()-0.5)*2;
+        octx.fillText(String(d), TEMPLATE_SIZE/2 + dx, TEMPLATE_SIZE/2 + dy);
+        const v = [];
+        const img = octx.getImageData(0,0,TEMPLATE_SIZE,TEMPLATE_SIZE).data;
+        for (let i=0;i<img.length;i+=4) {
+          // серый = 0..255; сохраняем плотность черного
+          const gray = (img[i]*0.299 + img[i+1]*0.587 + img[i+2]*0.114);
+          // invert because drawn digit is black on white; we want 'ink' density
+          v.push((255 - gray) / 255);
+        }
+        // normalize vector length
+        const norm = Math.hypot(...v.map(x=>x*x)) || 1;
+        templateBank[d].push(v.map(x=>x/norm));
+      }
+    }
+  })();
+
+  function extract28() {
+    // создаём временный canvas, отрисовываем текущее содержимое, масштабируем и бинаризуем
+    const tmp = document.createElement('canvas');
+    tmp.width = TEMPLATE_SIZE; tmp.height = TEMPLATE_SIZE;
+    const tctx = tmp.getContext('2d');
+
+    // чтобы получить все штрихи, рисуем белый background, затем нарисуем strokes черным
+    tctx.fillStyle = 'white';
+    tctx.fillRect(0,0,tmp.width,tmp.height);
+
+    // determine bounding box of strokes
+    const rect = canvas.getBoundingClientRect();
+    if (strokes.length === 0) return null;
+    let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+    for (const s of strokes) for (const p of s) {
+      minX = Math.min(minX, p[0]); minY = Math.min(minY, p[1]);
+      maxX = Math.max(maxX, p[0]); maxY = Math.max(maxY, p[1]);
+    }
+    // pad
+    const pad = 8;
+    minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+    maxX = Math.min(rect.width, maxX + pad); maxY = Math.min(rect.height, maxY + pad);
+    const w = Math.max(1, maxX - minX), h = Math.max(1, maxY - minY);
+
+    // draw strokes to temporary large canvas for scaling
+    const big = document.createElement('canvas');
+    big.width = Math.ceil(w); big.height = Math.ceil(h);
+    const bctx = big.getContext('2d');
+    bctx.fillStyle = 'white'; bctx.fillRect(0,0,big.width,big.height);
+    bctx.strokeStyle = 'black'; bctx.lineCap='round'; bctx.lineJoin='round'; bctx.lineWidth = 6;
+    for (const s of strokes) {
+      if (!s.length) continue;
+      bctx.beginPath();
+      let started = false;
+      for (const p of s) {
+        const x = p[0] - minX, y = p[1] - minY;
+        if (!started) { bctx.moveTo(x,y); started=true; }
+        else bctx.lineTo(x,y);
+      }
+      bctx.stroke();
+    }
+    // scale big -> tmp (28x28), centering preserving aspect ratio
+    // we want to fit the digit into 20x20 area inside 28x28 (like MNIST)
+    const targetBox = 20;
+    const scale = Math.min(targetBox / big.width, targetBox / big.height);
+    const drawW = big.width * scale, drawH = big.height * scale;
+    const offsetX = (TEMPLATE_SIZE - drawW) / 2;
+    const offsetY = (TEMPLATE_SIZE - drawH) / 2;
+    tctx.drawImage(big, 0, 0, big.width, big.height, offsetX, offsetY, drawW, drawH);
+
+    // read pixels and produce ink density vector
+    const img = tctx.getImageData(0,0,TEMPLATE_SIZE,TEMPLATE_SIZE).data;
+    const v = [];
+    for (let i=0;i<img.length;i+=4) {
+      const gray = (img[i]*0.299 + img[i+1]*0.587 + img[i+2]*0.114);
+      v.push((255 - gray) / 255); // ink density
+    }
+    // normalize vector to unit length for cosine-similarity
+    const norm = Math.hypot(...v) || 1;
+    return v.map(x=>x/norm);
+  }
+
+  function recognize() {
+    const v = extract28();
+    if (!v) { /* nothing drawn */ return; }
+    // compute best match by cosine similarity (dot product since vectors normalized)
+    let bestDigit = null, bestScore = -Infinity;
+    for (let d=0; d<=9; d++) {
+      for (const tpl of templateBank[d]) {
+        // dot product
+        let s = 0;
+        for (let i=0;i<tpl.length;i++) s += tpl[i] * v[i];
+        if (s > bestScore) { bestScore = s; bestDigit = d; }
+      }
+    }
+    // threshold: require reasonable match
+    if (bestScore > 0.45) { // эмпирический порог; можно настраивать
+      write(String(bestDigit));
+      // очищаем холст чуть позже
+      setTimeout(()=>{ strokes = []; redrawAll(); }, 220);
+    } else {
+      // слабая уверенность — не вставляем, но очищаем для удобства
+      setTimeout(()=>{ strokes = []; redrawAll(); }, 300);
+    }
+  }
+
+  document.getElementById('recognizeBtn').addEventListener('click', recognize);
+
+  /* ========== Установка / PWA prompt ========== */
+  let deferredPrompt = null;
+  const installHint = document.getElementById('installHint');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installHint.innerHTML = '<button id="installBtn" class="small-btn">Установить приложение</button>';
+    document.getElementById('installBtn').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      installHint.textContent = choice.outcome === 'accepted' ? 'Установлено' : 'Отклонено';
+    });
+  });
+
+  // Service worker registration
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').then(() => {
+      console.log('Service worker registered.');
+    }).catch(err => console.warn('SW reg failed', err));
+  }
+
+  // expose some functions for debugging (dev only)
+  window.__calc = { history, pushHistory, recognize };
+
+})();
+</script>
 </body>
 </html>
