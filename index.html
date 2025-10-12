@@ -1,96 +1,57 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="utf-8"/>
-    <title>Калькулятор 2025</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
-    <link rel="stylesheet" href="styles.css"/>
-
-    <!-- MyScript -->
-    <script src="https://cdn.myscript.com/js/myscript-math-web.min.js"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+  <title>Рукописный калькулятор</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-<main class="calc">
-    <!-- Экран + история -->
-    <section class="top">
-        <input id="screen" readonly placeholder="0"/>
-        <canvas id="canvas" width="320" height="80"></canvas>
-        <ul id="history"></ul>
-    </section>
+  <input id="screen" readonly placeholder="0"/>
+  <canvas id="canvas" width="420" height="160"></canvas>
+  <button id="clearPad">Очистить поле</button>
 
-    <!-- Кнопки -->
-    <section class="buttons">
-        <div id="basic" class="grid">
-            <button data-op="clear">C</button>
-            <button data-op="sign">+/-</button>
-            <button data-op="percent">%</button>
-            <button data-op="÷" class="op">÷</button>
+  <section class="buttons">
+    <div class="grid">
+      <button data-op="clear">C</button>
+      <button data-op="(">(</button>
+      <button data-op=")">)</button>
+      <button data-fn="sin">sin</button>
+      <button data-fn="cos">cos</button>
 
-            <button data-val="7">7</button>
-            <button data-val="8">8</button>
-            <button data-val="9">9</button>
-            <button data-op="×" class="op">×</button>
+      <button data-fn="tan">tan</button>
+      <button data-fn="log">log</button>
+      <button data-fn="ln">ln</button>
+      <button data-fn="sqrt">√</button>
+      <button data-op="^">xʸ</button>
 
-            <button data-val="4">4</button>
-            <button data-val="5">5</button>
-            <button data-val="6">6</button>
-            <button data-op="-" class="op">-</button>
+      <button data-val="7">7</button>
+      <button data-val="8">8</button>
+      <button data-val="9">9</button>
+      <button data-op="÷" class="op">÷</button>
+      <button data-val="π">π</button>
 
-            <button data-val="1">1</button>
-            <button data-val="2">2</button>
-            <button data-val="3">3</button>
-            <button data-op="+" class="op">+</button>
+      <button data-val="4">4</button>
+      <button data-val="5">5</button>
+      <button data-val="6">6</button>
+      <button data-op="×" class="op">×</button>
+      <button data-val="e">e</button>
 
-            <button data-val="0" class="span2">0</button>
-            <button data-val=".">.</button>
-            <button data-op="=" class="op">=</button>
-        </div>
+      <button data-val="1">1</button>
+      <button data-val="2">2</button>
+      <button data-val="3">3</button>
+      <button data-op="-" class="op">-</button>
+      <button data-op="=" class="op">=</button>
 
-        <div id="scientific" class="grid hidden">
-            <button data-op="clear">C</button>
-            <button data-op="(">(</button>
-            <button data-op=")">)</button>
-            <button data-op="÷" class="op">÷</button>
+      <button data-val="0" style="grid-column: span 2">0</button>
+      <button data-val=".">.</button>
+      <button data-op="+" class="op">+</button>
+    </div>
+  </section>
 
-            <button data-fn="sin">sin</button>
-            <button data-fn="cos">cos</button>
-            <button data-fn="tan">tan</button>
-            <button data-op="×" class="op">×</button>
-
-            <button data-fn="log">log</button>
-            <button data-fn="ln">ln</button>
-            <button data-fn="sqrt">√</button>
-            <button data-op="-" class="op">-</button>
-
-            <button data-fn="pow">xʸ</button>
-            <button data-val="π">π</button>
-            <button data-val="e">e</button>
-            <button data-op="+" class="op">+</button>
-
-            <button data-val="7">7</button>
-            <button data-val="8">8</button>
-            <button data-val="9">9</button>
-            <button data-op="=" class="op">=</button>
-
-            <button data-val="4">4</button>
-            <button data-val="5">5</button>
-            <button data-val="6">6</button>
-
-            <button data-val="1">1</button>
-            <button data-val="2">2</button>
-            <button data-val="3">3</button>
-
-            <button data-val="0" class="span2">0</button>
-            <button data-val=".">.</button>
-        </div>
-    </section>
-
-    <label class="toggle">
-        <input type="checkbox" id="sciToggle"/>
-        <span>Научный</span>
-    </label>
-</main>
-
-<script src="app.js"></script>
+  <!-- MyScript CDN -->
+  <script src="https://cdn.myscript.com/js/myscript-math-web.min.js"></script>
+  <script src="logic.js"></script>
+  <script src="canvas.js"></script>
 </body>
 </html>
